@@ -4,7 +4,6 @@ import bs4
 import lxml
 from pprint import pprint
 import re
-import tqdm
 
 
 key_words = ('django', 'flask')
@@ -24,7 +23,8 @@ def get_vacancy_list(hh_page_html):
     vacancy_list = hh_page_soup.find_all(class_="vacancy-serp-item__layout")
     return vacancy_list
 
-def get_information(vacancy_list, list_info, key_words):
+def get_information(vacancy_list, key_words):
+    list_info = []
     for vacancy in vacancy_list:
         description = vacancy.find("div", class_="g-user-content")
 
@@ -73,7 +73,7 @@ def format_salary(salary_string):
     return "Зарплата не указана"
 
 def pages_find(url):
-    html = get_html(url=url)
+    html = get_html(url=url, headers_data=get_headers())
     bs = bs4.BeautifulSoup(html, features='html5lib')
     num_pages = bs.find(class_="pager")
     list_span = []
@@ -83,19 +83,21 @@ def pages_find(url):
             list_span.append(int(title.text))
     return max(list_span)
 
-def pages(url, *key_words, num_pages=None):
+def pages(url, *key_words):
     vacancies = []
     headers_data = get_headers()
+    num_pages = pages_find(url)
     if num_pages is not None:
         num_pages = pages_find(url=url)       
-        for page in tqdm(range(num_pages), desc='Поиск по страницам ...'):
+        for page in range(num_pages):
             url_page = url + f'&page={page}'
             html = get_html(url=url_page, headers_data=headers_data)
             vacancies_list = get_vacancy_list(hh_page_html=html)
-            vacancies = get_information(vacancies_list, *key_words)
+            vacancies += get_information(vacancies_list, key_words)
     return vacancies
 
 
 if __name__ == '__main__':
     vacancies = pages(url, *key_words)
     pprint(vacancies)
+    print(f'Всего найдено вакансий: {len(vacancies)}')
